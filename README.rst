@@ -12,8 +12,8 @@ Async library for Hasicorp Vault
 .. image:: https://codecov.io/gh/terrycain/aiovault/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/terrycain/aiovault
 
-.. image:: https://readthedocs.org/projects/aiovault/badge/?version=latest
-  :target: https://aiovault.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/pyaiovault/badge/?version=latest
+  :target: https://pyaiovault.readthedocs.io
   :alt: Documentation Status
 
 .. image:: https://pyup.io/repos/github/terrycain/aiovault/shield.svg
@@ -42,7 +42,7 @@ Simple example of authenticating with vault and then writing then reading a secr
     import aiovault
 
     with aiovault.VaultClient(token='6c84fb90-12c4-11e1-840d-7b25c5ee775a') as client:
-        is_authed = await client..is_authenticated()
+        is_authed = await client.is_authenticated()
         print(is_authed)  # True
 
         await client.secrets.generic.create('some_secret', key1='value1', key2='value2')
