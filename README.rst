@@ -20,6 +20,9 @@ Async library for Hasicorp Vault
   :target: https://pyup.io/repos/github/terrycain/aiovault/
   :alt: Updates
 
+.. image:: https://pyup.io/repos/github/terrycain/aiovault/python-3-shield.svg
+  :target: https://pyup.io/repos/github/terrycain/aiovault/
+  :alt: Python 3
 
 aiovault 0.1.X release
 ======================
