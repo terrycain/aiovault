@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 """Tests for `aiovault` package."""
+import os
+import pytest
 import aiovault
 import aiovault.base
 
@@ -31,6 +33,7 @@ class TestBaseAudit(BaseTestCase):
         assert file_mount['description'] == desc
         assert file_mount['options']['path'] == path
 
+    @pytest.mark.skipif("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", reason="Skipping this test on Travis CI.")
     async def test_backend_syslog_add(self, loop):
         client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
 

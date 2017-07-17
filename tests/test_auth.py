@@ -84,12 +84,12 @@ class TestGitHubAuth(BaseTestCase):
         result = await client.auth.github.get_user('test_del_user')
         assert 'value' not in result
 
-    @pytest.mark.skipif('SLOW_TESTS' not in os.environ, reason="Skipping slow tests by default")
+    @pytest.mark.skipif('GITHUB_OAUTH_KEY' not in os.environ, reason="Skipping as no GitHub key")
     async def test_login(self, loop):
         client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
 
         await client.auth.github.map_user_policy('terrycain', ['default'])
-        token_obj = await client.auth.github.login('4aaec3f063b9b2abad2ae169d78fd64094058844')
+        token_obj = await client.auth.github.login(os.environ['GITHUB_OAUTH_KEY'])
         assert 'client_token' in token_obj.auth
         assert 'metadata' in token_obj.auth
         assert token_obj.auth['metadata']['username'] == 'terrycain'
