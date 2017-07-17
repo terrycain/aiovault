@@ -33,7 +33,7 @@ class TestBaseAudit(BaseTestCase):
         assert file_mount['description'] == desc
         assert file_mount['options']['path'] == path
 
-    @pytest.mark.skipif("TRAVIS" in os.environ and os.environ["TRAVIS"] == "true", reason="Skipping this test on Travis CI.")
+    @pytest.mark.skipif("TRAVIS" in os.environ, reason="Skipping this test on Travis CI.")
     async def test_backend_syslog_add(self, loop):
         client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
 
@@ -41,11 +41,7 @@ class TestBaseAudit(BaseTestCase):
         desc = 'Unittest Add'
         tag = 'vaultsyslog'
 
-        await client.audit.syslog.mount(
-            mount_path=name,
-            description=desc,
-            tag=tag
-        )
+        await client.audit.syslog.mount(mount_path=name, description=desc, tag=tag)
 
         audit_collection = await client.audit.list()
 
