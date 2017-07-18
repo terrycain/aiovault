@@ -12,17 +12,17 @@ class BaseSys(HTTPBase):
     def __init__(self, *args, **kwargs):
         super(BaseSys, self).__init__(*args, **kwargs)
 
-    async def seal_status(self, wrap_ttl: Union[int, None]=None) -> ResponseBase:
+    async def seal_status(self) -> ResponseBase:
         """
         Get Vault's seal status
 
         :param wrap_ttl: Wrap TTL
         :return: Response
         """
-        response = await self._get('sys/seal-status', wrap_ttl=wrap_ttl)
+        response = await self._get('sys/seal-status')
         json = await response.json()
 
-        return ResponseBase(json_dict=json, request_func=self._request)
+        return ResponseBase(json_dict={'data': json}, request_func=self._request)
 
     async def initialize(self, secret_shares: int=5, secret_threshold: int=3, root_token_pgp_key: Optional[str]=None, pgp_keys: Optional[List[str]]=None) -> ResponseBase:
         """
@@ -46,7 +46,7 @@ class BaseSys(HTTPBase):
         response = await self._put('sys/init', payload=payload)
         json = await response.json()
 
-        return ResponseBase(json_dict=json, request_func=self._request)
+        return ResponseBase(json_dict={'data': json}, request_func=self._request)
 
     async def remount(self, path_from: str, path_to: str):
         """
@@ -60,3 +60,25 @@ class BaseSys(HTTPBase):
             'to': path_to
         }
         await self._post('sys/remount', payload=payload)
+
+    async def unseal(self, key: Optional[str]) -> ResponseBase:
+        """
+        Unseal Vault
+
+        :param key: Unseal key, if str is None then just resets all unlock operations
+        """
+        if key is not None:
+            payload = {'key': key}
+        else:
+            payload = {'reset': True}
+
+        response = await self._put('sys/unseal', payload=payload)
+        json = await response.json()
+
+        return ResponseBase(json_dict={'data': json}, request_func=self._request)
+
+    async def seal(self):
+        """
+        Seal Vault
+        """
+        await self._put('sys/seal')
