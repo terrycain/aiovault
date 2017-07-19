@@ -82,3 +82,27 @@ class BaseSys(HTTPBase):
         Seal Vault
         """
         await self._put('sys/seal')
+
+    async def rotate(self):
+        """
+        Seal Vault
+        """
+        await self._put('sys/rotate')
+
+    async def health(self) -> ResponseBase:
+        """
+        Vault health
+        """
+        params = {
+            'standbyok': 'true',
+            'activecode': 200,
+            'standbycode': 200,
+            'sealedcode': 200,
+            'uninitcode': 200
+        }
+
+        response = await self._get('sys/health', params=params)
+        json = await response.json()
+
+        return ResponseBase(json_dict={'data': json}, request_func=self._request)
+

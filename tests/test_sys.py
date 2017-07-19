@@ -88,3 +88,24 @@ class TestSysInit(NoTLSTestCase):
         result = await client.sys.unseal(self.proc.unseal_keys[3])  # 3
 
         assert not result['sealed']
+
+    @pytest.mark.run(order=5)
+    async def test_rotate(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.sys.rotate()
+
+    @pytest.mark.run(order=6)
+    async def test_health(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        result = await client.sys.health()
+
+        assert 'cluster_id' in result
+        assert 'cluster_name' in result
+        assert 'initialized' in result
+        assert 'sealed' in result
+        assert 'standby' in result
+        assert 'version' in result
+
+        assert not result['sealed']

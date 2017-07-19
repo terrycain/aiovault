@@ -77,7 +77,7 @@ class HTTPBase(object):
         else:
             raise ValueError("Path isnt a str or list of str")
 
-    async def _get(self, path: Union[str, List[str]], wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _get(self, path: Union[str, List[str]], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP GET request
 
@@ -85,9 +85,9 @@ class HTTPBase(object):
         :param wrap_ttl: Optional TTL
         :return: A response object from aiohttp
         """
-        return await self._request('get', path, None, wrap_ttl=wrap_ttl)
+        return await self._request('get', path, payload=None, params=params, wrap_ttl=wrap_ttl)
 
-    async def _delete(self, path: Union[str, List[str]], wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _delete(self, path: Union[str, List[str]], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP DELETE request
 
@@ -95,9 +95,9 @@ class HTTPBase(object):
         :param wrap_ttl: Optional TTL
         :return: A response object from aiohttp
         """
-        return await self._request('delete', path, None, wrap_ttl=wrap_ttl)
+        return await self._request('delete', path, payload=None, params=params, wrap_ttl=wrap_ttl)
 
-    async def _list(self, path: Union[str, List[str]], wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _list(self, path: Union[str, List[str]], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP LIST request
 
@@ -105,9 +105,9 @@ class HTTPBase(object):
         :param wrap_ttl: Optional TTL
         :return: A response object from aiohttp
         """
-        return await self._request('list', path, None, wrap_ttl=wrap_ttl)
+        return await self._request('list', path, payload=None, params=params, wrap_ttl=wrap_ttl)
 
-    async def _post(self, path: Union[str, List[str]], payload: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _post(self, path: Union[str, List[str]], payload: Optional[dict]=None, params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP POST request
 
@@ -116,9 +116,9 @@ class HTTPBase(object):
         :param wrap_ttl: Optional TTL
         :return: A response object from aiohttp
         """
-        return await self._request('post', path, payload, wrap_ttl=wrap_ttl)
+        return await self._request('post', path, payload=payload, params=params, wrap_ttl=wrap_ttl)
 
-    async def _put(self, path: Union[str, List[str]], payload: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _put(self, path: Union[str, List[str]], payload: Optional[dict]=None, params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP PUT request
 
@@ -127,9 +127,9 @@ class HTTPBase(object):
         :param wrap_ttl: Optional TTL
         :return: A response object from aiohttp
         """
-        return await self._request('put', path, payload, wrap_ttl=wrap_ttl)
+        return await self._request('put', path, payload=payload, params=params, wrap_ttl=wrap_ttl)
 
-    async def _request(self, method: str, path: Union[str, List[str]], payload: Optional[dict], wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _request(self, method: str, path: Union[str, List[str]], payload: Optional[dict], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP Request method which takes a method
 
@@ -140,6 +140,7 @@ class HTTPBase(object):
         :param method: HTTP Method
         :param path: Path components
         :param payload: Dictonary of key value to be turned into JSON
+        :param params: Querystring parameters
         :param wrap_ttl: Optional TTL
         :return: A response object from aiohttp
         """
@@ -155,6 +156,9 @@ class HTTPBase(object):
         kwargs = {'headers': headers}
         if payload is not None:
             kwargs['json'] = payload
+
+        if params is not None:
+            kwargs['params'] = params
 
         async with aiohttp.ClientSession(loop=self.loop) as session:
             if method != 'list':
