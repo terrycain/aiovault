@@ -84,16 +84,74 @@ class TestGitHubAuth(BaseTestCase):
         result = await client.auth.github.get_user('test_del_user')
         assert 'value' not in result
 
-    @pytest.mark.skipif('GITHUB_OAUTH_KEY' not in os.environ, reason="Skipping as no GitHub key")
+    @pytest.mark.skipif('TEST_GITHUB_OAUTH_KEY' not in os.environ, reason="Skipping as no GitHub key")
     async def test_login(self, loop):
         client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
 
         await client.auth.github.map_user_policy('terrycain', ['default'])
-        token_obj = await client.auth.github.login(os.environ['GITHUB_OAUTH_KEY'])
+        token_obj = await client.auth.github.login(os.environ['TEST_GITHUB_OAUTH_KEY'])
         assert 'client_token' in token_obj.auth
         assert 'metadata' in token_obj.auth
         assert token_obj.auth['metadata']['username'] == 'terrycain'
 
+
+class TestRadiusAuth(BaseTestCase):
+    @pytest.mark.run(order=1)
+    async def test_mount_radius(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        radius_host = os.environ.get('TEST_RADIUS_HOST', 'localhost')  # Because my radius server isnt on localhost
+        await client.auth.radius.mount('radius', radius_host=radius_host, secret='testing123', unregistered_user_policies=['default'], description='test_mount')
+        result = await client.auth.list_backends()
+        assert 'radius/' in result
+        assert result['radius/']['description'] == 'test_mount'
+
+    async def test_get_backend(self, loop):  # For completeness's sake
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+        radius_backend = client.auth.get_radius_backend('radius')
+
+        await radius_backend.create('test_get_backend_user')
+
+        result = await radius_backend.list()
+        assert 'keys' in result
+        assert 'test_get_backend_user' in result['keys']
+
+    async def test_create_user(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.radius.create('test_create_user')
+
+        result = await client.auth.radius.list()
+        assert 'keys' in result
+        assert 'test_create_user' in result['keys']
+
+    async def test_read_user(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.radius.create('test_read_user')
+
+        result = await client.auth.radius.read('test_read_user')
+        assert 'policies' in result
+
+    async def test_delete_user(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.radius.create('test_delete_user')
+
+        result = await client.auth.radius.list()
+        assert 'test_delete_user' in result['keys']
+
+        await client.auth.radius.delete('test_delete_user')
+
+        result = await client.auth.radius.list()
+        assert 'test_delete_user' not in result['keys']
+
+    async def test_login(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        result = await client.auth.radius.login('vaulttest', 'test1234')
+        assert 'client_token' in result.auth
+        assert 'accessor' in result.auth
 
 class TestUserPassAuth(BaseTestCase):
     @pytest.mark.run(order=1)

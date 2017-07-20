@@ -1,10 +1,17 @@
 dist: trusty
+sudo: required
 
 language: python
 python:
   - 3.5
   - 3.6-dev
 #  - 3.7
+
+before_install:
+  - sudo apt-get install -y freeradius
+  - echo -e '"vaulttest"     Cleartext-Password := "test1234"\n               Reply-Message = "Hello, %{User-Name}"' | sudo tee -a /etc/freeradius/users
+  - sudo service freeradius restart
+  - sudo radtest 'vaulttest' test1234 localhost 0 testing123
 
 install: pip install -U tox-travis
 

@@ -154,6 +154,71 @@ class UserPassAuthBackend(HTTPBase):
         return ResponseBase(json_dict=json_data, request_func=self._request)
 
 
+class RadiusAuthBackend(HTTPBase):
+    def __init__(self, *args, mount_path: str='radius', **kwargs) -> None:
+        super(RadiusAuthBackend, self).__init__(*args, **kwargs)
+
+        self.mount_path = 'auth/' + mount_path
+
+    async def mount(self, mount_path: str, radius_host: str, secret: str, radius_port: int=1812, unregistered_user_policies: Optional[List[str]]=None, dial_timeout: int=10,
+                    read_timeout: int=10, nas_port: int=10, description: str=''):
+        payload = {
+            'type': 'radius',
+            'description': description,
+        }
+
+        payload2 = {
+            'host': radius_host,
+            'port': radius_port,
+            'secret': secret,
+            'dial_timeout': dial_timeout,
+            'read_timeout': read_timeout,
+            'nas_port': nas_port
+
+        }
+        if unregistered_user_policies is not None:
+            payload2['unregistered_user_policies'] = ','.join(unregistered_user_policies)
+
+        await self._post(['sys/auth', mount_path], payload=payload)
+        await self._post(['auth', mount_path, 'config'], payload=payload2)
+
+    async def create(self, username: str, policies: Optional[List[str]]=None):
+        payload = {}
+        if policies is not None:
+            payload['policies'] = ','.join(policies)
+
+        await self._post([self.mount_path, 'users', username], payload=payload)
+
+    async def update(self, username: str, policies: Optional[List[str]] = None):
+        await self.create(username, policies)
+
+    async def read(self, username: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self.mount_path, 'users', username], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self.mount_path, 'users'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def delete(self, username: str):
+        await self._delete([self.mount_path, 'users', username])
+
+    async def login(self, username: str, password: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        payload = {
+            'username': username,
+            'password': password
+        }
+
+        response = await self._post([self.mount_path, 'login'], payload=payload, wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+
 class ApproleBackend(HTTPBase):
     def __init__(self, *args, mount_path: str='approle', **kwargs) -> None:
         super(ApproleBackend, self).__init__(*args, **kwargs)
@@ -296,20 +361,6 @@ class ApproleBackend(HTTPBase):
             await self._post([self.mount_path, 'role', name, 'secret-id/destroy'], payload={'secret_id': secret_id})
         else:
             await self._post([self.mount_path, 'role', name, 'secret-id-accessor/destroy'], payload={'secret_id_accessor': secret_id_accessor})
-
-    # TODO /auth/approle/role/[role_name]/custom-secret-id
-    # TODO /auth/approle/role/login
-
-    # TODO Collect all these into 1 function with all None's
-    # TODO   Need GET/POST and DELETE
-    # TODO /auth/approle/role/[role_name]/policies
-    # TODO /auth/approle/role/[role_name]/secret-id-num-uses
-    # TODO /auth/approle/role/[role_name]/secret-id-ttl
-    # TODO /auth/approle/role/[role_name]/token-ttl
-    # TODO /auth/approle/role/[role_name]/token-max-ttl
-    # TODO /auth/approle/role/[role_name]/bind-secret-id
-    # TODO /auth/approle/role/[role_name]/bound-cidr-list
-    # TODO /auth/approle/role/[role_name]/period
 
     async def login(self, role_id: str, secret_id: Optional[str]=None, wrap_ttl: Optional[int]=None) -> ResponseBase:
         payload = {
@@ -459,6 +510,7 @@ class BaseAuth(HTTPBase):
         self._userpass = None
         self._github = None
         self._approle = None
+        self._radius = None
 
     @property
     def token(self) -> TokenAuthBackend:
@@ -488,6 +540,13 @@ class BaseAuth(HTTPBase):
 
         return self._approle
 
+    @property
+    def radius(self) -> RadiusAuthBackend:
+        if self._radius is None:
+            self._radius = RadiusAuthBackend(*self._args, **self._kwargs)
+
+        return self._radius
+
     async def list_backends(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._get('sys/auth', wrap_ttl=wrap_ttl)
 
@@ -502,3 +561,6 @@ class BaseAuth(HTTPBase):
 
     def get_approle_backend(self, mount_path) -> ApproleBackend:
         return ApproleBackend(*self._args, mount_path=mount_path, **self._kwargs)
+
+    def get_radius_backend(self, mount_path) -> RadiusAuthBackend:
+        return RadiusAuthBackend(*self._args, mount_path=mount_path, **self._kwargs)
