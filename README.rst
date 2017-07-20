@@ -6,6 +6,9 @@ Async library for Hasicorp Vault
 .. image:: https://img.shields.io/pypi/v/aiovault.svg
   :target: https://pypi.python.org/pypi/aiovault
 
+.. image:: https://img.shields.io/pypi/dm/aiovault.svg
+  :target: https://pypi.python.org/pypi/aiovault
+
 .. image:: https://img.shields.io/travis/terrycain/aiovault.svg
   :target: https://travis-ci.org/terrycain/aiovault
 
@@ -24,7 +27,7 @@ Async library for Hasicorp Vault
   :target: https://pyup.io/repos/github/terrycain/aiovault/
   :alt: Python 3
 
-aiovault 0.1.X release
+aiovault 0.X.0 release
 ======================
 
 This is the inital release, aimed to get started with PyPI.
@@ -61,19 +64,19 @@ https://pyaiovault.readthedocs.io/en/latest/
 Features
 --------
 
-- Token, GitHub and User/Password Authentication backends
-- Generic Secret backend
+- Token, GitHub, AppRole and User/Password Authentication backends
+- Generic Secret and Transit backends
 - File and Syslog Audit backends
 - Policy management
 - Backend renaming
+- Initialization, seal and health management
 
 
 TODO (Near future)
 ------------------
 
-- Secret backends: Transit, TOTP, Consul
-- Auth backends: AppRole, LDAP, Radius, MFA
-- Tests for vault initialisation, sealing and rekeying
+- Secret backends: TOTP, Consul
+- Auth backends: LDAP, Radius, MFA
 
 TODO (Long term)
 ----------------
