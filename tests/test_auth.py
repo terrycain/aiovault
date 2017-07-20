@@ -306,3 +306,153 @@ class TestTokenAuth(BaseTestCase):
         client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
 
         await client.auth.token.tidy()
+
+
+class TestAppRoleAuth(BaseTestCase):
+    @pytest.mark.run(order=1)
+    async def test_mount_approle(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.mount('approle', description='test_mount')
+        result = await client.auth.list_backends()
+        assert 'approle/' in result
+        assert result['approle/']['description'] == 'test_mount'
+
+    async def test_approle_list(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_create')
+
+        result = await client.auth.approle.list()
+        assert 'keys' in result
+        assert 'test_create' in result['keys']
+
+    async def test_approle_read(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_read')
+
+        result = await client.auth.approle.read('test_read')
+        assert 'bind_secret_id' in result
+        assert 'policies' in result
+        assert 'default' in result['policies']
+
+    async def test_approle_update(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_update')
+        await client.auth.approle.update('test_update', bind_secret_id=False, bound_cidr_list=['172.16.30.0/24', '172.16.31.0/24'])
+        result = await client.auth.approle.read('test_update')
+        assert not result['bind_secret_id']
+        assert result['bound_cidr_list'] == '172.16.30.0/24,172.16.31.0/24'
+
+    async def test_approle_delete(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_delete')
+        await client.auth.approle.read('test_delete')
+        await client.auth.approle.delete('test_delete')
+
+        with pytest.raises(aiovault.exceptions.InvalidPath):
+            await client.auth.approle.read('test_delete')
+
+    async def test_approle_read_role_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_read_role_id')
+        result = await client.auth.approle.read_roleid('test_read_role_id')
+        assert 'role_id' in result
+
+    async def test_approle_set_role_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_set_role_id')
+        await client.auth.approle.set_roleid('test_set_role_id', 'new_role_id')
+        result = await client.auth.approle.read_roleid('test_set_role_id')
+        assert 'role_id' in result
+        assert result['role_id'] == 'new_role_id'
+
+    async def test_approle_generate_secret_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_gen_secret_id')
+        result = await client.auth.approle.generate_secret_id('test_gen_secret_id')
+        assert 'secret_id_accessor' in result
+        assert 'secret_id' in result
+
+    async def test_approle_generate_custom_secret_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_custom_secret_id')
+        result = await client.auth.approle.generate_secret_id('test_custom_secret_id', custom_id='test1234')
+        assert 'secret_id_accessor' in result
+        assert 'secret_id' in result
+        assert result['secret_id'] == 'test1234'
+
+    async def test_approle_list_secret_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_list_secret_id')
+        sec_id_result = await client.auth.approle.generate_secret_id('test_list_secret_id')
+
+        result = await client.auth.approle.list_secret_ids('test_list_secret_id')
+        assert 'keys' in result
+        assert sec_id_result['secret_id_accessor'] in result['keys']
+
+    async def test_approle_lookup_secret_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_lookup_secret_id')
+        sec_id_result = await client.auth.approle.generate_secret_id('test_lookup_secret_id', metadata={'test1': 'value1'})
+
+        result = await client.auth.approle.lookup_secret_id('test_lookup_secret_id', secret_id=sec_id_result['secret_id'])
+        assert 'creation_time' in result
+        assert 'metadata' in result
+        assert result['metadata']['test1'] == 'value1'
+
+    async def test_approle_lookup_secret_id_accessor(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_lookup_secret_id_accessor')
+        sec_id_result = await client.auth.approle.generate_secret_id('test_lookup_secret_id_accessor', metadata={'test2': 'value2'})
+
+        result = await client.auth.approle.lookup_secret_id('test_lookup_secret_id_accessor', secret_id_accessor=sec_id_result['secret_id_accessor'])
+        assert 'creation_time' in result
+        assert 'metadata' in result
+        assert result['metadata']['test2'] == 'value2'
+
+    async def test_approle_destroy_secret_id(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_destroy_secret_id')
+        sec_id_result = await client.auth.approle.generate_secret_id('test_destroy_secret_id', metadata={'test3': 'value3'})
+
+        await client.auth.approle.destroy_secret_id('test_destroy_secret_id', secret_id=sec_id_result['secret_id'])
+
+        with pytest.raises(aiovault.exceptions.InvalidPath):
+            await client.auth.approle.lookup_secret_id('test_destroy_secret_id', secret_id=sec_id_result['secret_id'])
+
+    async def test_approle_destroy_secret_id_accessor(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_destroy_secret_id_accessor')
+        sec_id_result = await client.auth.approle.generate_secret_id('test_destroy_secret_id_accessor', metadata={'test4': 'value4'})
+
+        await client.auth.approle.destroy_secret_id('test_destroy_secret_id_accessor', secret_id_accessor=sec_id_result['secret_id_accessor'])
+
+        with pytest.raises(aiovault.exceptions.InvalidPath):
+            await client.auth.approle.lookup_secret_id('test_destroy_secret_id_accessor', secret_id_accessor=sec_id_result['secret_id_accessor'])
+
+    async def test_login(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.approle.create('test_login')
+        role_result = await client.auth.approle.read_roleid('test_login')
+        assert 'role_id' in role_result
+
+        secret_result = await client.auth.approle.generate_secret_id('test_login')
+        assert 'secret_id' in secret_result
+
+        login_result = await client.auth.approle.login(role_id=role_result['role_id'], secret_id=secret_result['secret_id'])
+        assert 'client_token' in login_result.auth
+        assert 'accessor' in login_result.auth

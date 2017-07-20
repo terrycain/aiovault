@@ -1,6 +1,8 @@
+import json
 from typing import Optional, List, Dict
 
 from .base import HTTPBase, ResponseBase
+from .exceptions import InvalidPath, InternalServerError
 
 
 class GitHubAuthBackend(HTTPBase):
@@ -38,16 +40,16 @@ class GitHubAuthBackend(HTTPBase):
     async def list_teams(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._list([self.mount_path, 'map/teams'], wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def get_team(self, team_name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
         team_name = team_name.lower().replace(' ', '-')
 
         response = await self._get([self.mount_path, 'map/teams', team_name], wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def del_team(self, team_name: str):
         team_name = team_name.lower().replace(' ', '-')
@@ -62,16 +64,16 @@ class GitHubAuthBackend(HTTPBase):
     async def list_users(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._list([self.mount_path, 'map/users'], wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def get_user(self, team_name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
         team_name = team_name.lower().replace(' ', '-')
 
         response = await self._get([self.mount_path, 'map/users', team_name], wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def del_user(self, team_name: str):
         team_name = team_name.lower().replace(' ', '-')
@@ -81,8 +83,8 @@ class GitHubAuthBackend(HTTPBase):
     async def login(self, token: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._post([self.mount_path, 'login'], payload={'token': token}, wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
 
 class UserPassAuthBackend(HTTPBase):
@@ -101,8 +103,8 @@ class UserPassAuthBackend(HTTPBase):
     async def read(self, username: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._get([self.mount_path, 'users', username], wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def create(self, username: str, password: str, policies: Optional[List[str]]=None, ttl: Optional[int]=None, max_ttl: Optional[int]=None):
         payload = {
@@ -142,22 +144,192 @@ class UserPassAuthBackend(HTTPBase):
     async def login(self, username: str, password: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._post([self.mount_path, 'login', username], payload={'password': password}, wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._list([self.mount_path, 'users'], wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+
+class ApproleBackend(HTTPBase):
+    def __init__(self, *args, mount_path: str='approle', **kwargs) -> None:
+        super(ApproleBackend, self).__init__(*args, **kwargs)
+
+        self.mount_path = 'auth/' + mount_path
+
+    async def mount(self, mount_path: str, description: str=''):
+        payload = {
+            'type': 'approle',
+            'description': description,
+        }
+
+        await self._post(['sys/auth', mount_path], payload=payload)
+
+    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self.mount_path, 'role'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def create(self, name: str, bind_secret_id: bool=True, bound_cidr_list: Optional[List[str]]=None, policies: Optional[List[str]]=None,
+                     secret_id_num_uses: int=0, secret_id_ttl: int=0, token_num_uses: int=0, token_ttl: int=0, token_max_ttl: int=0, period: int=0):
+        """
+        Create AppRole
+
+        :param name: Role Name
+        :param bind_secret_id: Require secret_id to be presented when logging in using this AppRole
+        :param bound_cidr_list: List of CIDR blocks
+        :param policies: List of policies
+        :param secret_id_num_uses: Number of times any particular SecretID can be used to fetch a token from this AppRole
+        :param secret_id_ttl: Secret ID TTL
+        :param token_num_uses: Number of times issued tokens can be used
+        :param token_ttl: Token TTL
+        :param token_max_ttl: Token Max TTL
+        :param period: Periodic token TTL
+        """
+        payload = {
+            'bind_secret_id': bind_secret_id,
+            'secret_id_num_uses': secret_id_num_uses,
+            'secret_id_ttl': secret_id_ttl,
+            'token_num_uses': token_num_uses,
+            'token_ttl': token_ttl,
+            'token_max_ttl': token_max_ttl,
+            'period': period
+        }
+        if bound_cidr_list is not None:
+            payload['bound_cidr_list'] = ','.join(bound_cidr_list)
+        if policies is not None:
+            payload['policies'] = ','.join(policies)
+
+        await self._post([self.mount_path, 'role', name], payload=payload)
+
+    async def update(self, name: str, bind_secret_id: bool=True, bound_cidr_list: Optional[List[str]]=None, policies: Optional[List[str]]=None,
+                     secret_id_num_uses: int=0, secret_id_ttl: int=0, token_num_uses: int=0, token_ttl: int=0, token_max_ttl: int=0, period: int=0):
+        """
+        Update AppRole
+
+        :param name: Role Name
+        :param bind_secret_id: Require secret_id to be presented when logging in using this AppRole
+        :param bound_cidr_list: List of CIDR blocks
+        :param policies: List of policies
+        :param secret_id_num_uses: Number of times any particular SecretID can be used to fetch a token from this AppRole
+        :param secret_id_ttl: Secret ID TTL
+        :param token_num_uses: Number of times issued tokens can be used
+        :param token_ttl: Token TTL
+        :param token_max_ttl: Token Max TTL
+        :param period: Periodic token TTL
+        """
+        await self.create(name, bind_secret_id, bound_cidr_list, policies, secret_id_num_uses, secret_id_ttl, token_num_uses, token_ttl, token_max_ttl, period)
+
+    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self.mount_path, 'role', name], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def delete(self, name: str):
+        await self._delete([self.mount_path, 'role', name])
+
+    async def read_roleid(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self.mount_path, 'role', name, 'role-id'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def set_roleid(self, name: str, role_id: str):
+        await self._post([self.mount_path, 'role', name, 'role-id'], payload={'role_id': role_id})
+
+    async def generate_secret_id(self, name: str, cidr_list: Optional[List[str]]=None, metadata: Optional[dict]=None, wrap_ttl: Optional[int]=None, custom_id: str=None) -> ResponseBase:
+        payload = {
+
+        }
+        url_part = 'secret-id'
+
+        if cidr_list is not None:
+            payload['cidr_list'] = ','.join(cidr_list)
+        if metadata is not None:
+            payload['metadata'] = json.dumps(metadata)
+
+        if custom_id is not None:
+            url_part = 'custom-secret-id'
+            payload['secret_id'] = custom_id
+
+        response = await self._post([self.mount_path, 'role', name, url_part], payload=payload, wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def list_secret_ids(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self.mount_path, 'role', name, 'secret-id'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def lookup_secret_id(self, name: str, secret_id: Optional[str]=None, secret_id_accessor: Optional[str]=None, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        if secret_id is None and secret_id_accessor is None:
+            raise ValueError('secret_id or secret_id_accessor must be provided')
+
+        try:
+            if secret_id is not None:
+                response = await self._post([self.mount_path, 'role', name, 'secret-id/lookup'], payload={'secret_id': secret_id}, wrap_ttl=wrap_ttl)
+            else:
+                response = await self._post([self.mount_path, 'role', name, 'secret-id-accessor/lookup'], payload={'secret_id_accessor': secret_id_accessor}, wrap_ttl=wrap_ttl)
+        except InternalServerError as err:  # Catch if accessor not found and convert into invalid path, theres probably a better way, its late, im tired.
+            if 'failed to find accessor entry for secret_id' in str(err):
+                raise InvalidPath("Secret does not exist")
+            raise
+        else:
+            if response.status == 204:
+                raise InvalidPath("Secret does not exist")
+            else:
+                json_data = await response.json()
+                return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def destroy_secret_id(self, name: str, secret_id: Optional[str]=None, secret_id_accessor: Optional[str]=None):
+        if secret_id is None and secret_id_accessor is None:
+            raise ValueError('secret_id or secret_id_accessor must be provided')
+
+        if secret_id is not None:
+            await self._post([self.mount_path, 'role', name, 'secret-id/destroy'], payload={'secret_id': secret_id})
+        else:
+            await self._post([self.mount_path, 'role', name, 'secret-id-accessor/destroy'], payload={'secret_id_accessor': secret_id_accessor})
+
+    # TODO /auth/approle/role/[role_name]/custom-secret-id
+    # TODO /auth/approle/role/login
+
+    # TODO Collect all these into 1 function with all None's
+    # TODO   Need GET/POST and DELETE
+    # TODO /auth/approle/role/[role_name]/policies
+    # TODO /auth/approle/role/[role_name]/secret-id-num-uses
+    # TODO /auth/approle/role/[role_name]/secret-id-ttl
+    # TODO /auth/approle/role/[role_name]/token-ttl
+    # TODO /auth/approle/role/[role_name]/token-max-ttl
+    # TODO /auth/approle/role/[role_name]/bind-secret-id
+    # TODO /auth/approle/role/[role_name]/bound-cidr-list
+    # TODO /auth/approle/role/[role_name]/period
+
+    async def login(self, role_id: str, secret_id: Optional[str]=None, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        payload = {
+            'role_id': role_id
+        }
+        if secret_id is not None:
+            payload['secret_id'] = secret_id
+
+        response = await self._post([self.mount_path, 'login'], payload=payload, wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
 
 class TokenAuthBackend(HTTPBase):
     async def list_accessors(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._list(['auth/token/accessors'], wrap_ttl=wrap_ttl)
-        json = await response.json()
+        json_data = await response.json()
 
-        return ResponseBase(json_dict=json, request_func=self._request)
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def create(self, name: Optional[str]=None, policies: Optional[List[str]]=None, role: Optional[str]=None,
                      no_parent: bool=False, display_name: Optional[str]=None, meta: Optional[Dict[str, str]]=None,
@@ -190,8 +362,8 @@ class TokenAuthBackend(HTTPBase):
             response = await self._post('auth/token/create', payload=payload, wrap_ttl=wrap_ttl)
 
         # TODO possibly set ResponseBase.__getitem__ to use .auth instead of .data for token create responses
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def lookup(self, token: Optional[str]=None, accessor: Optional[str]=None, wrap_ttl: Optional[int]=None) -> ResponseBase:
         if token is None and accessor is None:
@@ -200,19 +372,19 @@ class TokenAuthBackend(HTTPBase):
         if token is not None:
             response = await self._post('auth/token/lookup', payload={'token': token}, wrap_ttl=wrap_ttl)
 
-            json = await response.json()
-            return ResponseBase(json_dict=json, request_func=self._request)
+            json_data = await response.json()
+            return ResponseBase(json_dict=json_data, request_func=self._request)
         else:
             response = await self._post('auth/token/lookup-accessor', payload={'accessor': accessor}, wrap_ttl=wrap_ttl)
 
-            json = await response.json()
-            return ResponseBase(json_dict=json, request_func=self._request)
+            json_data = await response.json()
+            return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def lookup_self(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._get('auth/token/lookup', wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def renew(self, token: str, increment: Optional[int]=None, wrap_ttl: Optional[int]=None) -> ResponseBase:
         payload = {
@@ -223,8 +395,8 @@ class TokenAuthBackend(HTTPBase):
 
         response = await self._post('auth/token/renew', payload=payload, wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def renew_self(self, increment: Optional[int]=None, wrap_ttl: Optional[int]=None) -> ResponseBase:
         if increment is not None:
@@ -232,8 +404,8 @@ class TokenAuthBackend(HTTPBase):
         else:
             response = await self._post('auth/token/renew-self', payload={}, wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def revoke(self, token: Optional[str]=None, accessor: Optional[str]=None, orphan: bool=False):
         if token is None and accessor is None:
@@ -253,8 +425,8 @@ class TokenAuthBackend(HTTPBase):
     async def list_roles(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._list('auth/token/roles', wrap_ttl=wrap_ttl)
 
-        json = await response.json()
-        return ResponseBase(json_dict=json, request_func=self._request)
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
 
     async def create_role(self, name: str, allowed_policies: Optional[List[str]]=None, disallowed_policies: Optional[List[str]]=None,
                           orphan: bool=False, period: Optional[str]=None, renewable: bool=False, path_suffix: Optional[str]=None,
@@ -286,6 +458,7 @@ class BaseAuth(HTTPBase):
         self._token = None
         self._userpass = None
         self._github = None
+        self._approle = None
 
     @property
     def token(self) -> TokenAuthBackend:
@@ -308,6 +481,13 @@ class BaseAuth(HTTPBase):
 
         return self._github
 
+    @property
+    def approle(self) -> ApproleBackend:
+        if self._approle is None:
+            self._approle = ApproleBackend(*self._args, **self._kwargs)
+
+        return self._approle
+
     async def list_backends(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._get('sys/auth', wrap_ttl=wrap_ttl)
 
@@ -319,3 +499,6 @@ class BaseAuth(HTTPBase):
 
     def get_github_backend(self, mount_path) -> GitHubAuthBackend:
         return GitHubAuthBackend(*self._args, mount_path=mount_path, **self._kwargs)
+
+    def get_approle_backend(self, mount_path) -> ApproleBackend:
+        return ApproleBackend(*self._args, mount_path=mount_path, **self._kwargs)

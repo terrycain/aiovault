@@ -575,7 +575,7 @@ class TransitSecretBackend(HTTPBase):
         :param input_string: Data to be hmac'd (it will be base64 encoded)
         :param signature: /transit/sign signature
         :param hmac: HMAC
-        :param result_type: Key type either ciphertext or plaintext
+        :param result_format: Result format
         :param algorithm: Algorithm to use sha2-224, sha2-256, sha2-384, sha2-512
 
         :raises exceptions.VaultError: On error
