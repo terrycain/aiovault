@@ -67,8 +67,8 @@ https://pyaiovault.readthedocs.io/en/latest/
 Features
 --------
 
-- Token, GitHub, AppRole and User/Password Authentication backends
-- Generic Secret and Transit backends
+- Token, GitHub, AppRole, LDAP, RADIUS and User/Password Authentication backends
+- Generic Secret, TOTP and Transit backends
 - File and Syslog Audit backends
 - Policy management
 - Backend renaming
@@ -78,8 +78,7 @@ Features
 TODO (Near future)
 ------------------
 
-- Secret backends: TOTP, Consul
-- Auth backends: LDAP, Radius, MFA
+- Secret backends: Consul
 
 TODO (Long term)
 ----------------
