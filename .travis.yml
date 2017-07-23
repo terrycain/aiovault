@@ -1,6 +1,8 @@
-# dist: trusty
-# sudo: required
-sudo: false
+dist: trusty
+sudo: required
+
+# Until i can be bothered to get radius working in non-sudo, cant use travis-ci -docker
+#sudo: false
 
 language: python
 python:
@@ -23,9 +25,9 @@ before_script:
   - ldapadd -x -H ldap://localhost:3389 -D cn=admin,cn=config         -w test -f tests/resources/02_enable_memberof.ldif
   - ldapadd -x -H ldap://localhost:3389 -D cn=admin,dc=example,dc=com -w test -f tests/resources/03_add_user.ldif
   - ldapadd -x -H ldap://localhost:3389 -D cn=admin,dc=example,dc=com -w test -f tests/resources/04_add_group.ldif
-#  - echo -e '"vaulttest"     Cleartext-Password := "test1234"\n               Reply-Message = "Hello, %{User-Name}"' | sudo tee -a /etc/freeradius/users
-#  - sudo service freeradius restart
-#  - sudo radtest 'vaulttest' test1234 localhost 0 testing123
+  - echo -e '"vaulttest"     Cleartext-Password := "test1234"\n               Reply-Message = "Hello, %{User-Name}"' | sudo tee -a /etc/freeradius/users
+  - sudo service freeradius restart
+  - sudo radtest 'vaulttest' test1234 localhost 0 testing123
 
 install: pip install -U tox-travis
 
