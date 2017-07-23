@@ -1,5 +1,6 @@
-dist: trusty
-sudo: required
+# dist: trusty
+# sudo: required
+sudo: false
 
 language: python
 python:
@@ -7,11 +8,24 @@ python:
   - 3.6-dev
 #  - 3.7
 
-before_install:
-  - sudo apt-get install -y freeradius
-  - echo -e '"vaulttest"     Cleartext-Password := "test1234"\n               Reply-Message = "Hello, %{User-Name}"' | sudo tee -a /etc/freeradius/users
-  - sudo service freeradius restart
-  - sudo radtest 'vaulttest' test1234 localhost 0 testing123
+addons:
+  apt:
+    packages:
+    - ldap-utils
+    - slapd
+    - freeradius
+
+before_script:
+  - mkdir /tmp/slapd
+  - slapd -f slapd.conf -h "ldap://0.0.0.0:3389" &
+  - sleep 3
+  - ldapadd -x -H ldap://localhost:3389 -D cn=admin,dc=example,dc=com -w test -f tests/resources/01_setup_nodes.ldif
+  - ldapadd -x -H ldap://localhost:3389 -D cn=admin,cn=config         -w test -f tests/resources/02_enable_memberof.ldif
+  - ldapadd -x -H ldap://localhost:3389 -D cn=admin,dc=example,dc=com -w test -f tests/resources/03_add_user.ldif
+  - ldapadd -x -H ldap://localhost:3389 -D cn=admin,dc=example,dc=com -w test -f tests/resources/04_add_group.ldif
+#  - echo -e '"vaulttest"     Cleartext-Password := "test1234"\n               Reply-Message = "Hello, %{User-Name}"' | sudo tee -a /etc/freeradius/users
+#  - sudo service freeradius restart
+#  - sudo radtest 'vaulttest' test1234 localhost 0 testing123
 
 install: pip install -U tox-travis
 
