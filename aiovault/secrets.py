@@ -610,6 +610,93 @@ class TransitSecretBackend(HTTPBase):
         return ResponseBase(json_dict=json, request_func=self._request)
 
 
+class TOTPSecretBackend(HTTPBase):
+    """
+    The time based one-time-password secret backend
+
+    By default will use the /totp path, if others exist then call :class:`BaseSecret.get_totp_secret_backend` to get a TOTP backend object for that path
+    """
+    def __init__(self, *args, mount_path: str='totp', **kwargs):
+        super(TOTPSecretBackend, self).__init__(*args, **kwargs)
+
+        self._mount_path = mount_path
+
+    async def mount(self, path: str, description: str=''):
+        """
+        Mount the TOTP secret backend against the path
+
+        :param path: Mount path
+        :param description: Mount description
+
+        :raises exceptions.VaultError: On error
+        """
+        payload = {
+            'type': 'totp',
+            'description': description,
+        }
+
+        await self._post(['sys/mounts', path], payload=payload)
+
+    async def create(self, name: str, generate: bool=False, exported: bool=True, key_size: int=20, url: str='', issuer: str='', account_name: str='', period: int=30, algorithm: str='SHA1',
+                     digits: int=6, skew: int=1, qr_size: int=200, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        if algorithm not in ('SHA1', 'SHA256', 'SHA512'):
+            raise ValueError("Algorithm not SHA1, SHA256 or SHA512")
+        if digits not in (6, 8):
+            raise ValueError("Digits must be either 6 or 8")
+        if skew not in (0, 1):
+            raise ValueError("Skew must be either 0 or 1")
+
+        payload = {
+            'generate': generate,
+            'exported': exported,
+            'key_size': key_size,
+            'url': url,
+            'issuer': issuer,
+            'account_name': account_name,
+            'period': period,
+            'algorithm': algorithm,
+            'digits': digits,
+            'skew': skew,
+            'qr_size': qr_size
+        }
+
+        response = await self._post([self._mount_path, 'keys', name], payload=payload, wrap_ttl=wrap_ttl)
+        if response.status == 204:  # Can produce no output if no QR code, but this keeps the return valueconstant
+            return ResponseBase(json_dict={}, request_func=self._request)
+
+        json = await response.json()
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self._mount_path, 'keys', name], wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self._mount_path, 'keys'], wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+    async def delete(self, name: str):
+        await self._delete([self._mount_path, 'keys', name])
+
+    async def generate_code(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self._mount_path, 'code', name], wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+    async def validate_code(self, name: str, code: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        payload = {'code': code}
+
+        response = await self._post([self._mount_path, 'code', name], payload=payload, wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+
 class BaseSecret(HTTPBase):
     """
     Base secret class, will contain all supported secret backends
@@ -621,6 +708,7 @@ class BaseSecret(HTTPBase):
 
         self._generic = None
         self._transit = None
+        self._totp = None
 
     @property
     def generic(self) -> GenericSecretBackend:
@@ -646,6 +734,18 @@ class BaseSecret(HTTPBase):
 
         return self._transit
 
+    @property
+    def totp(self) -> TOTPSecretBackend:
+        """
+        Get the generic secret backend with a default path of "secret"
+
+        :return: Generic secret backend
+        """
+        if self._totp is None:
+            self._totp = TOTPSecretBackend(*self._args, **self._kwargs)
+
+        return self._totp
+
     def get_generic_secret_backend(self, mount_path) -> GenericSecretBackend:
         """
         Get an object representing the generic secret backend on the given mount path
@@ -663,6 +763,15 @@ class BaseSecret(HTTPBase):
         :return: Secret backend
         """
         return TransitSecretBackend(*self._args, mount_path=mount_path, **self._kwargs)
+
+    def get_totp_secret_backend(self, mount_path) -> TOTPSecretBackend:
+        """
+        Get an object representing the generic secret backend on the given mount path
+
+        :param mount_path: Mount path
+        :return: Secret backend
+        """
+        return TOTPSecretBackend(*self._args, mount_path=mount_path, **self._kwargs)
 
     async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         """
