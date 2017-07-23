@@ -1,0 +1,17 @@
+dn: uid=vault,ou=people,dc=example,dc=com
+cn: Vault User
+givenName: Vault
+sn: User
+uid: vault
+uidNumber: 5000
+gidNumber: 10000
+homeDirectory: /home/vault
+mail: vault@example.com
+objectClass: top
+objectClass: posixAccount
+objectClass: shadowAccount
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+loginShell: /bin/bash
+userPassword: {SSHA}hpc6hdEJCR5+QCfrgfsswF3YntnzdtiQ

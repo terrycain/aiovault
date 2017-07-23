@@ -1,0 +1,5 @@
+dn: cn=testgroup,ou=groups,dc=example,dc=com
+objectClass: groupofnames
+cn: testgroup
+description: All users
+member: uid=vault,ou=people,dc=example,dc=com

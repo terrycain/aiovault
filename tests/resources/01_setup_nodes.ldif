@@ -1,0 +1,12 @@
+dn: dc=example,dc=com
+objectClass: dcObject
+objectClass: organizationalUnit
+ou: Test
+
+dn: ou=people,dc=example,dc=com
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=groups,dc=example,dc=com
+objectClass: organizationalUnit
+ou: Groups

@@ -153,6 +153,7 @@ class TestRadiusAuth(BaseTestCase):
         assert 'client_token' in result.auth
         assert 'accessor' in result.auth
 
+
 class TestUserPassAuth(BaseTestCase):
     @pytest.mark.run(order=1)
     async def test_mount_userpass(self, loop):
@@ -514,3 +515,102 @@ class TestAppRoleAuth(BaseTestCase):
         login_result = await client.auth.approle.login(role_id=role_result['role_id'], secret_id=secret_result['secret_id'])
         assert 'client_token' in login_result.auth
         assert 'accessor' in login_result.auth
+
+
+class TestLDAPAuth(BaseTestCase):
+    @pytest.mark.run(order=1)
+    async def test_mount_ldap(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        ldap_url = 'ldap://' + os.environ.get('TEST_LDAP_HOST', 'localhost') + ':' + os.environ.get('TEST_LDAP_PORT', '3389')  # Because my ldap server isnt on localhost
+        await client.auth.ldap.mount('ldap', description='test_mount', url=ldap_url,
+                                     discoverdn=False, userattr='uid', userdn='ou=people,dc=example,dc=com',
+                                     groupdn='ou=groups,dc=example,dc=com', groupfilter='(member={{.UserDN}})', groupattr='cn')
+        result = await client.auth.list_backends()
+        assert 'ldap/' in result
+        assert result['ldap/']['description'] == 'test_mount'
+
+    async def test_config(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        ldap_backend = client.auth.get_ldap_backend('ldap')
+
+        config = await ldap_backend.get_config()
+
+        assert config['userdn'] == 'ou=people,dc=example,dc=com'
+        assert config['groupdn'] == 'ou=groups,dc=example,dc=com'
+        assert config['groupattr'] == 'cn'
+
+    async def test_login(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        # Setup testgroup group to get default policy
+        await client.auth.ldap.create_group('testgroup', policies=['default'])
+
+        token_result = await client.auth.ldap.login('vault', 'test1234')
+
+        assert 'client_token' in token_result.auth
+        assert 'accessor' in token_result.auth
+        assert 'default' in token_result.auth['policies']
+
+    async def test_create_group(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.ldap.create_group('test_create_group', policies=['default'])
+
+        result = await client.auth.ldap.list_groups()
+
+        assert 'keys' in result
+        assert 'test_create_group' in result['keys']
+
+    async def test_read_group(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.ldap.create_group('test_read_group', policies=['default'])
+
+        result = await client.auth.ldap.read_group('test_read_group')
+
+        assert 'policies' in result
+        assert result['policies'] == 'default'
+
+    async def test_delete_group(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.ldap.create_group('test_delete_group', policies=['default'])
+        result = await client.auth.ldap.list_groups()
+        assert 'test_delete_group' in result['keys']
+
+        await client.auth.ldap.delete_group('test_delete_group')
+        result = await client.auth.ldap.list_groups()
+        assert 'test_delete_group' not in result['keys']
+
+    async def test_create_user(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.ldap.create_user('test_create_user', policies=['default'])
+
+        result = await client.auth.ldap.list_users()
+
+        assert 'keys' in result
+        assert 'test_create_user' in result['keys']
+
+    async def test_read_user(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.ldap.create_user('test_read_user', policies=['default'])
+
+        result = await client.auth.ldap.read_user('test_read_user')
+
+        assert 'policies' in result
+        assert result['policies'] == 'default'
+
+    async def test_delete_user(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.auth.ldap.create_user('test_delete_user', policies=['default'])
+        result = await client.auth.ldap.list_users()
+        assert 'test_delete_user' in result['keys']
+
+        await client.auth.ldap.delete_user('test_delete_user')
+        result = await client.auth.ldap.list_users()
+        assert 'test_delete_user' not in result['keys']

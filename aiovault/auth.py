@@ -5,6 +5,97 @@ from .base import HTTPBase, ResponseBase
 from .exceptions import InvalidPath, InternalServerError
 
 
+class LDAPAuthBackend(HTTPBase):
+    def __init__(self, *args, mount_path: str='ldap', **kwargs) -> None:
+        super(LDAPAuthBackend, self).__init__(*args, **kwargs)
+
+        self.mount_path = 'auth/' + mount_path
+
+    async def mount(self, mount_path: str,
+                    url: str, binddn: str='', bindpass: str='', userdn: str='', userattr: str='uid', discoverdn: bool=False, deny_null_bind: bool=True, upndomain: str='',
+                    groupfilter: str='(|(memberUid={{.Username}})(member={{.UserDN}})(uniqueMember={{.UserDN}}))', groupdn: str='', groupattr: str='cn',
+                    description: str='', starttls: bool=False, tls_min_version: str='tls12', tls_max_version: str='tls12', insecure_tls: bool=False, certificate: str='',
+                    ):
+        payload = {
+            'type': 'ldap',
+            'description': description,
+        }
+
+        payload2 = {
+            'url': url,
+            'binddn': binddn,
+            'bindpass': bindpass,
+            'userdn': userdn,
+            'userattr': userattr,
+            'discoverdn': discoverdn,
+            'deny_null_bind': deny_null_bind,
+            'upndomain': upndomain,
+
+            'groupfilter': groupfilter,
+            'groupdn': groupdn,
+            'groupattr': groupattr,
+
+            'starttls': starttls,
+            'tls_min_version': tls_min_version,
+            'tls_max_version': tls_max_version,
+            'insecure_tls': insecure_tls,
+            'certificate': certificate
+        }
+
+        await self._post(['sys/auth', mount_path], payload=payload)
+        await self._post(['auth', mount_path, 'config'], payload=payload2)
+
+    async def get_config(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self.mount_path, 'config'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def list_groups(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self.mount_path, 'groups'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def create_group(self, name: str, policies: List[str]):
+        payload = {'policies': ','.join(policies)}
+        await self._post([self.mount_path, 'groups', name], payload=payload)
+
+    async def read_group(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self.mount_path, 'groups', name], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def delete_group(self, name: str):
+        await self._delete([self.mount_path, 'groups', name])
+
+    async def list_users(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self.mount_path, 'users'], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def create_user(self, name: str, policies: List[str]):
+        payload = {'policies': ','.join(policies)}
+        await self._post([self.mount_path, 'users', name], payload=payload)
+
+    async def read_user(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self.mount_path, 'users', name], wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+    async def delete_user(self, name: str):
+        await self._delete([self.mount_path, 'users', name])
+
+    async def login(self, username: str, password: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._post([self.mount_path, 'login', username], payload={'password': password}, wrap_ttl=wrap_ttl)
+
+        json_data = await response.json()
+        return ResponseBase(json_dict=json_data, request_func=self._request)
+
+
 class GitHubAuthBackend(HTTPBase):
     def __init__(self, *args, mount_path: str='github', **kwargs) -> None:
         super(GitHubAuthBackend, self).__init__(*args, **kwargs)
@@ -511,6 +602,7 @@ class BaseAuth(HTTPBase):
         self._github = None
         self._approle = None
         self._radius = None
+        self._ldap = None
 
     @property
     def token(self) -> TokenAuthBackend:
@@ -547,6 +639,13 @@ class BaseAuth(HTTPBase):
 
         return self._radius
 
+    @property
+    def ldap(self) -> LDAPAuthBackend:
+        if self._ldap is None:
+            self._ldap = LDAPAuthBackend(*self._args, **self._kwargs)
+
+        return self._ldap
+
     async def list_backends(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         response = await self._get('sys/auth', wrap_ttl=wrap_ttl)
 
@@ -564,3 +663,6 @@ class BaseAuth(HTTPBase):
 
     def get_radius_backend(self, mount_path) -> RadiusAuthBackend:
         return RadiusAuthBackend(*self._args, mount_path=mount_path, **self._kwargs)
+
+    def get_ldap_backend(self, mount_path) -> LDAPAuthBackend:
+        return LDAPAuthBackend(*self._args, mount_path=mount_path, **self._kwargs)
