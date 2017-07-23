@@ -16,6 +16,7 @@ addons:
     - ldap-utils
     - slapd
     - freeradius
+    - freeradius-utils
 
 before_script:
   - mkdir /tmp/slapd
