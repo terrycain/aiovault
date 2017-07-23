@@ -17,7 +17,7 @@ addons:
 
 before_script:
   - mkdir /tmp/slapd
-  - slapd -f slapd.conf -h "ldap://0.0.0.0:3389" &
+  - slapd -f tests/resources/slapd.conf -h "ldap://0.0.0.0:3389" &
   - sleep 3
   - ldapadd -x -H ldap://localhost:3389 -D cn=admin,dc=example,dc=com -w test -f tests/resources/01_setup_nodes.ldif
   - ldapadd -x -H ldap://localhost:3389 -D cn=admin,cn=config         -w test -f tests/resources/02_enable_memberof.ldif
