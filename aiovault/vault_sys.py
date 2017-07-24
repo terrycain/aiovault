@@ -1,7 +1,7 @@
 """
 /sys classes
 """
-from typing import Union, Optional, List
+from typing import Optional, List
 from .base import HTTPBase, ResponseBase
 
 
@@ -9,9 +9,6 @@ class BaseSys(HTTPBase):
     """
     Collection of methods to act on the /sys/ URLs
     """
-    def __init__(self, *args, **kwargs):
-        super(BaseSys, self).__init__(*args, **kwargs)
-
     async def seal_status(self) -> ResponseBase:
         """
         Get Vault's seal status
@@ -24,7 +21,7 @@ class BaseSys(HTTPBase):
 
         return ResponseBase(json_dict={'data': json}, request_func=self._request)
 
-    async def initialize(self, secret_shares: int=5, secret_threshold: int=3, root_token_pgp_key: Optional[str]=None, pgp_keys: Optional[List[str]]=None) -> ResponseBase:
+    async def initialize(self, secret_shares: int = 5, secret_threshold: int = 3, root_token_pgp_key: Optional[str] = None, pgp_keys: Optional[List[str]] = None) -> ResponseBase:
         """
         Initialize Vault
 
@@ -105,4 +102,3 @@ class BaseSys(HTTPBase):
         json = await response.json()
 
         return ResponseBase(json_dict={'data': json}, request_func=self._request)
-

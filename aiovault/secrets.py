@@ -12,12 +12,12 @@ class GenericSecretBackend(HTTPBase):
 
     By default will use the /secret path, if others exist then call :class:`BaseSecret.get_generic_secret_backend` to get a secret backend object for that path
     """
-    def __init__(self, *args, mount_path: str='secret', **kwargs):
+    def __init__(self, *args, mount_path: str = 'secret', **kwargs):
         super(GenericSecretBackend, self).__init__(*args, **kwargs)
 
         self._mount_path = mount_path
 
-    async def mount(self, path: str, description: str='', default_lease_ttl: int=0, max_lease_ttl: int=0, force_no_cache: bool=False):
+    async def mount(self, path: str, description: str = '', default_lease_ttl: int = 0, max_lease_ttl: int = 0, force_no_cache: bool = False):
         """
         Mount the generic secret backend against the path
 
@@ -81,7 +81,7 @@ class GenericSecretBackend(HTTPBase):
         """
         await self._delete([self._mount_path, path])
 
-    async def read(self, path: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def read(self, path: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         Read generic secret
 
@@ -96,7 +96,7 @@ class GenericSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def list(self, path: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def list(self, path: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         List all secrets on the given path
 
@@ -119,12 +119,12 @@ class TransitSecretBackend(HTTPBase):
     By default will use the /transit path, if others exist then call :class:`BaseSecret.get_transit_secret_backend` to get a secret backend object for that path
     """
 
-    def __init__(self, *args, mount_path: str='transit', **kwargs):
+    def __init__(self, *args, mount_path: str = 'transit', **kwargs):
         super(TransitSecretBackend, self).__init__(*args, **kwargs)
 
         self._mount_path = mount_path
 
-    async def mount(self, path: str, description: str=''):
+    async def mount(self, path: str, description: str = ''):
         """
         Mount the transit secret backend against the path
 
@@ -140,7 +140,7 @@ class TransitSecretBackend(HTTPBase):
 
         await self._post(['sys/mounts', path], payload=payload)
 
-    async def create(self, name: str, convergent_encryption: bool=False, derived: bool=False, exportable: bool=False, key_type: str='aes256-gcm96'):
+    async def create(self, name: str, convergent_encryption: bool = False, derived: bool = False, exportable: bool = False, key_type: str = 'aes256-gcm96'):
         """
         Create a key
 
@@ -164,7 +164,7 @@ class TransitSecretBackend(HTTPBase):
         }
         await self._post([self._mount_path, 'keys', name], payload=payload)
 
-    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def read(self, name: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         Read transit key
 
@@ -179,7 +179,7 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def list(self, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         List transit key
 
@@ -203,7 +203,7 @@ class TransitSecretBackend(HTTPBase):
         """
         await self._delete([self._mount_path, 'keys', name])
 
-    async def update(self, name: str, min_decryption_version: int=0, min_encryption_verison: int=0, deletion_allowed: bool=False):
+    async def update(self, name: str, min_decryption_version: int = 0, min_encryption_verison: int = 0, deletion_allowed: bool = False):
         """
         Update the transit key
 
@@ -231,7 +231,7 @@ class TransitSecretBackend(HTTPBase):
         """
         await self._post([self._mount_path, 'keys', name, 'rotate'])
 
-    async def export(self, name: str, key_type: str, version: str='latest') -> ResponseBase:
+    async def export(self, name: str, key_type: str, version: str = 'latest') -> ResponseBase:
         """
         Export transit key
 
@@ -250,8 +250,8 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def encrypt(self, name: str, plaintext: Union[str, bytes], context: Union[str, bytes]='', key_version: Optional[int]=None, nonce: Union[str, bytes]='',
-                      batch_input: Optional[List[Dict[str, Union[str, bytes]]]]=None, key_type: str='aes256-gcm96', convergent_encryption: Optional[str]=None) -> ResponseBase:
+    async def encrypt(self, name: str, plaintext: Union[str, bytes], context: Union[str, bytes] = '', key_version: Optional[int] = None, nonce: Union[str, bytes] = '',
+                      batch_input: Optional[List[Dict[str, Union[str, bytes]]]] = None, key_type: str = 'aes256-gcm96', convergent_encryption: Optional[str] = None) -> ResponseBase:
         """
         Encrypt plaintext
 
@@ -275,7 +275,7 @@ class TransitSecretBackend(HTTPBase):
             plaintext = plaintext.encode()
 
         payload['plaintext'] = base64.b64encode(plaintext).decode()
-        if len(context) > 0:
+        if context:
             if isinstance(context, str):
                 context = context.encode()
             payload['context'] = base64.b64encode(context).decode()
@@ -283,7 +283,7 @@ class TransitSecretBackend(HTTPBase):
         if key_version is not None:
             payload['key_version'] = key_version
 
-        if len(nonce) > 0:
+        if nonce:
             if isinstance(nonce, str):
                 nonce = nonce.encode()
             payload['nonce'] = base64.b64encode(nonce).decode()
@@ -316,8 +316,8 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def decrypt(self, name: str, ciphertext: Union[str, bytes], context: Union[str, bytes]='', nonce: Union[str, bytes]='',
-                      batch_input: Optional[List[Dict[str, Union[str, bytes]]]]=None) -> ResponseBase:
+    async def decrypt(self, name: str, ciphertext: Union[str, bytes], context: Union[str, bytes] = '', nonce: Union[str, bytes] = '',
+                      batch_input: Optional[List[Dict[str, Union[str, bytes]]]] = None) -> ResponseBase:
 
         """
         Decrypt ciphertext
@@ -336,12 +336,12 @@ class TransitSecretBackend(HTTPBase):
             ciphertext = base64.b64encode(ciphertext).decode()
 
         payload['ciphertext'] = ciphertext
-        if len(context) > 0:
+        if context:
             if isinstance(context, bytes):
                 context = base64.b64encode(context).decode()
             payload['context'] = context
 
-        if len(nonce) > 0:
+        if nonce:
             if isinstance(nonce, bytes):
                 nonce = base64.b64encode(nonce).decode()
             payload['nonce'] = nonce
@@ -396,8 +396,8 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def rewrap(self, name: str, ciphertext: str, context: str='', nonce: str='', key_version: Optional[int]=None,
-                     batch_input: Optional[List[Dict[str, Union[str, bytes]]]]=None) -> ResponseBase:
+    async def rewrap(self, name: str, ciphertext: str, context: str = '', nonce: str = '', key_version: Optional[int] = None,
+                     batch_input: Optional[List[Dict[str, Union[str, bytes]]]] = None) -> ResponseBase:
         """
         Rewrap ciphertext
 
@@ -416,10 +416,10 @@ class TransitSecretBackend(HTTPBase):
         payload = {
             'ciphertext': ciphertext
         }
-        if len(context) > 0:
+        if context:
             payload['context'] = context
 
-        if len(nonce) > 0:
+        if nonce:
             payload['nonce'] = nonce
 
         if key_version is not None:
@@ -433,8 +433,8 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def generate_key_data(self, name: str, context: Union[str, bytes]='', nonce: Union[str, bytes]='',
-                                result_type: str='wrapped', bits: int=512) -> ResponseBase:
+    async def generate_key_data(self, name: str, context: Union[str, bytes] = '', nonce: Union[str, bytes] = '',
+                                result_type: str = 'wrapped', bits: int = 512) -> ResponseBase:
         """
         Generate key and encrypt it with the named key
 
@@ -455,12 +455,12 @@ class TransitSecretBackend(HTTPBase):
         payload = {
             'bits': bits
         }
-        if len(context) > 0:
+        if context:
             if isinstance(context, str):
                 context = context.encode()
             payload['context'] = base64.b64encode(context).decode()
 
-        if len(nonce) > 0:
+        if nonce:
             if isinstance(nonce, str):
                 nonce = nonce.encode()
             payload['nonce'] = base64.b64encode(nonce).decode()
@@ -470,7 +470,7 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def generate_random_bytes(self, length: int=32, result_format: str='bytes') -> ResponseBase:
+    async def generate_random_bytes(self, length: int = 32, result_format: str = 'bytes') -> ResponseBase:
         """
         Generate random bytes
 
@@ -498,7 +498,7 @@ class TransitSecretBackend(HTTPBase):
 
     # Not coding /transit/hash as can do that in python
 
-    async def generate_hmac(self, name: str, input_string: Union[str, bytes], key_version: Optional[int]=None, algorithm: str='sha2-256', result_format: str='base64') -> ResponseBase:
+    async def generate_hmac(self, name: str, input_string: Union[str, bytes], key_version: Optional[int] = None, algorithm: str = 'sha2-256', result_format: str = 'base64') -> ResponseBase:
         """
         Generate HMAC
 
@@ -534,7 +534,7 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def sign(self, name: str, input_string: Union[str, bytes], key_version: Optional[int]=None, algorithm: str='sha2-256') -> ResponseBase:
+    async def sign(self, name: str, input_string: Union[str, bytes], key_version: Optional[int] = None, algorithm: str = 'sha2-256') -> ResponseBase:
         """
         Sign data
 
@@ -565,7 +565,7 @@ class TransitSecretBackend(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def verify(self, name: str, input_string: Union[str, bytes], signature: Optional[str]=None, hmac: Optional[str]=None, algorithm: str='sha2-256', result_format: str='base64') -> ResponseBase:
+    async def verify(self, name: str, input_string: Union[str, bytes], signature: Optional[str] = None, hmac: Optional[str] = None, algorithm: str = 'sha2-256', result_format: str = 'base64') -> ResponseBase:
         """
         Verify data
 
@@ -616,12 +616,12 @@ class TOTPSecretBackend(HTTPBase):
 
     By default will use the /totp path, if others exist then call :class:`BaseSecret.get_totp_secret_backend` to get a TOTP backend object for that path
     """
-    def __init__(self, *args, mount_path: str='totp', **kwargs):
+    def __init__(self, *args, mount_path: str = 'totp', **kwargs):
         super(TOTPSecretBackend, self).__init__(*args, **kwargs)
 
         self._mount_path = mount_path
 
-    async def mount(self, path: str, description: str=''):
+    async def mount(self, path: str, description: str = ''):
         """
         Mount the TOTP secret backend against the path
 
@@ -637,8 +637,8 @@ class TOTPSecretBackend(HTTPBase):
 
         await self._post(['sys/mounts', path], payload=payload)
 
-    async def create(self, name: str, generate: bool=False, exported: bool=True, key_size: int=20, url: str='', issuer: str='', account_name: str='', period: int=30, algorithm: str='SHA1',
-                     digits: int=6, skew: int=1, qr_size: int=200, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def create(self, name: str, generate: bool = False, exported: bool = True, key_size: int = 20, url: str = '', issuer: str = '', account_name: str = '', period: int = 30, algorithm: str = 'SHA1',
+                     digits: int = 6, skew: int = 1, qr_size: int = 200, wrap_ttl: Optional[int] = None) -> ResponseBase:
         if algorithm not in ('SHA1', 'SHA256', 'SHA512'):
             raise ValueError("Algorithm not SHA1, SHA256 or SHA512")
         if digits not in (6, 8):
@@ -667,13 +667,13 @@ class TOTPSecretBackend(HTTPBase):
         json = await response.json()
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def read(self, name: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         response = await self._get([self._mount_path, 'keys', name], wrap_ttl=wrap_ttl)
         json = await response.json()
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def list(self, wrap_ttl: Optional[int] = None) -> ResponseBase:
         response = await self._list([self._mount_path, 'keys'], wrap_ttl=wrap_ttl)
         json = await response.json()
 
@@ -682,13 +682,13 @@ class TOTPSecretBackend(HTTPBase):
     async def delete(self, name: str):
         await self._delete([self._mount_path, 'keys', name])
 
-    async def generate_code(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def generate_code(self, name: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         response = await self._get([self._mount_path, 'code', name], wrap_ttl=wrap_ttl)
         json = await response.json()
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def validate_code(self, name: str, code: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def validate_code(self, name: str, code: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         payload = {'code': code}
 
         response = await self._post([self._mount_path, 'code', name], payload=payload, wrap_ttl=wrap_ttl)
@@ -698,12 +698,12 @@ class TOTPSecretBackend(HTTPBase):
 
 
 class ConsulSecretBackend(HTTPBase):
-    def __init__(self, *args, mount_path: str='consul', **kwargs):
+    def __init__(self, *args, mount_path: str = 'consul', **kwargs):
         super(ConsulSecretBackend, self).__init__(*args, **kwargs)
 
         self._mount_path = mount_path
 
-    async def mount(self, path: str, address: str, port: int, management_token: str, https: bool=True, description: str=''):
+    async def mount(self, path: str, address: str, port: int, management_token: str, https: bool = True, description: str = ''):
         payload = {
             'type': 'consul',
             'description': description,
@@ -717,7 +717,7 @@ class ConsulSecretBackend(HTTPBase):
         await self._post(['sys/mounts', path], payload=payload)
         await self._post([path, 'config/access'], payload=payload2)
 
-    async def create(self, name: str, consul_policy: Optional[Union[str, bytes]]=None, lease: str='', token_type: str='client'):
+    async def create(self, name: str, consul_policy: Optional[Union[str, bytes]] = None, lease: str = '', token_type: str = 'client'):
         """
         Create a consul role
 
@@ -744,13 +744,13 @@ class ConsulSecretBackend(HTTPBase):
 
         await self._post([self._mount_path, 'roles', name], payload=payload)
 
-    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def read(self, name: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         response = await self._get([self._mount_path, 'roles', name], wrap_ttl=wrap_ttl)
         json = await response.json()
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def list(self, wrap_ttl: Optional[int] = None) -> ResponseBase:
         response = await self._list([self._mount_path, 'roles'], wrap_ttl=wrap_ttl)
         json = await response.json()
 
@@ -759,22 +759,11 @@ class ConsulSecretBackend(HTTPBase):
     async def delete(self, name: str):
         await self._delete([self._mount_path, 'roles', name])
 
-    async def generate_credential(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def generate_credential(self, name: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         response = await self._get([self._mount_path, 'creds', name], wrap_ttl=wrap_ttl)
         json = await response.json()
 
         return ResponseBase(json_dict=json, request_func=self._request)
-
-
-
-
-
-
-
-
-
-
-
 
 
 class BaseSecret(HTTPBase):
@@ -864,7 +853,7 @@ class BaseSecret(HTTPBase):
     def get_consul_secret_backend(self, mount_path) -> ConsulSecretBackend:
         return ConsulSecretBackend(*self._args, mount_path=mount_path, **self._kwargs)
 
-    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def list(self, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         List secret backends
 
