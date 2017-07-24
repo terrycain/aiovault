@@ -1,4 +1,5 @@
 tests/vault
+tests/consul
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
