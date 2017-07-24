@@ -697,6 +697,86 @@ class TOTPSecretBackend(HTTPBase):
         return ResponseBase(json_dict=json, request_func=self._request)
 
 
+class ConsulSecretBackend(HTTPBase):
+    def __init__(self, *args, mount_path: str='consul', **kwargs):
+        super(ConsulSecretBackend, self).__init__(*args, **kwargs)
+
+        self._mount_path = mount_path
+
+    async def mount(self, path: str, address: str, port: int, management_token: str, https: bool=True, description: str=''):
+        payload = {
+            'type': 'consul',
+            'description': description,
+        }
+        payload2 = {
+            'address': '{0}:{1}'.format(address, port),
+            'scheme': 'https' if https else 'http',
+            'token': management_token
+        }
+
+        await self._post(['sys/mounts', path], payload=payload)
+        await self._post([path, 'config/access'], payload=payload2)
+
+    async def create(self, name: str, consul_policy: Optional[Union[str, bytes]]=None, lease: str='', token_type: str='client'):
+        """
+        Create a consul role
+
+        :param name: Role name
+        :param consul_policy: Consul policy (will be base64 encoded regardless)
+        :param lease: Lease, should be a go time string like 54s or 1h 5s
+        :param token_type: Either client or management
+        """
+        if token_type not in ('client', 'management'):
+            raise ValueError("token_type must be either client or management")
+
+        if token_type == 'client' and consul_policy is None:
+            raise ValueError('Must supply a policy when token type is client')
+
+        if isinstance(consul_policy, str):
+            consul_policy = consul_policy.encode()
+        consul_policy = base64.b64encode(consul_policy).decode()
+
+        payload = {
+            'lease': lease,
+            'policy': consul_policy,
+            'token_type': token_type,
+        }
+
+        await self._post([self._mount_path, 'roles', name], payload=payload)
+
+    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self._mount_path, 'roles', name], wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._list([self._mount_path, 'roles'], wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+    async def delete(self, name: str):
+        await self._delete([self._mount_path, 'roles', name])
+
+    async def generate_credential(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+        response = await self._get([self._mount_path, 'creds', name], wrap_ttl=wrap_ttl)
+        json = await response.json()
+
+        return ResponseBase(json_dict=json, request_func=self._request)
+
+
+
+
+
+
+
+
+
+
+
+
+
 class BaseSecret(HTTPBase):
     """
     Base secret class, will contain all supported secret backends
@@ -709,6 +789,7 @@ class BaseSecret(HTTPBase):
         self._generic = None
         self._transit = None
         self._totp = None
+        self._consul = None
 
     @property
     def generic(self) -> GenericSecretBackend:
@@ -746,6 +827,13 @@ class BaseSecret(HTTPBase):
 
         return self._totp
 
+    @property
+    def consul(self) -> ConsulSecretBackend:
+        if self._consul is None:
+            self._consul = ConsulSecretBackend(*self._args, **self._kwargs)
+
+        return self._consul
+
     def get_generic_secret_backend(self, mount_path) -> GenericSecretBackend:
         """
         Get an object representing the generic secret backend on the given mount path
@@ -772,6 +860,9 @@ class BaseSecret(HTTPBase):
         :return: Secret backend
         """
         return TOTPSecretBackend(*self._args, mount_path=mount_path, **self._kwargs)
+
+    def get_consul_secret_backend(self, mount_path) -> ConsulSecretBackend:
+        return ConsulSecretBackend(*self._args, mount_path=mount_path, **self._kwargs)
 
     async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
         """

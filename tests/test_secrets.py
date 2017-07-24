@@ -10,7 +10,7 @@ import aiovault.base
 import binascii
 import base64
 
-from .common import BaseTestCase
+from .common import BaseTestCase, ConsulTestCase
 
 
 class TestBaseSecretBackend(BaseTestCase):
@@ -478,3 +478,56 @@ class TestTOTPSecretBackend(BaseTestCase):
         verify_result = await client.secrets.totp.validate_code('test_verify', code_result['code'])
         assert 'valid' in verify_result
         assert verify_result['valid']
+
+
+class TestConsulSecretBackend(ConsulTestCase):
+    consul_policy = 'key "" { policy = "read" }'
+
+    @pytest.mark.run(order=1)
+    async def test_mount_consul(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.secrets.consul.mount('consul', address='127.0.0.1', port=8500, management_token='master_token', description='test_mount_totp', https=False)
+        result = await client.secrets.list()
+        assert 'consul/' in result
+
+    async def test_create_role(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.secrets.consul.create('test_create', consul_policy=self.consul_policy)
+
+        result = await client.secrets.consul.list()
+        assert 'keys' in result
+        assert 'test_create' in result['keys']
+
+    async def test_read_role(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.secrets.consul.create('test_read', consul_policy=self.consul_policy)
+
+        result = await client.secrets.consul.read('test_read')
+        assert 'policy' in result
+        assert 'lease' in result
+        assert 'token_type' in result
+        assert result['token_type'] == 'client'
+
+    async def test_delete_role(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.secrets.consul.create('test_delete', consul_policy=self.consul_policy)
+
+        result = await client.secrets.consul.list()
+        assert 'test_delete' in result['keys']
+
+        await client.secrets.consul.delete('test_delete')
+
+        result = await client.secrets.consul.list()
+        assert 'test_delete' not in result['keys']
+
+    async def test_generate_credential(self, loop):
+        client = aiovault.VaultClient(token=self.proc.root_token, loop=loop)
+
+        await client.secrets.consul.create('test_generate', consul_policy=self.consul_policy)
+
+        result = await client.secrets.consul.generate_credential('test_generate')
+        assert 'token' in result
