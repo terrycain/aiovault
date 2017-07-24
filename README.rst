@@ -30,13 +30,13 @@ Async library for Hasicorp Vault
   :target: https://pyup.io/repos/github/terrycain/aiovault/
   :alt: Python 3
 
-aiovault 0.X.0 release
+aiovault 1.0.0 release
 ======================
 
-This is the inital release, aimed to get started with PyPI.
+First major release. Should be pretty stable... all the tests pass so cant be too bad.
 
-There is some basic support of Vault features. The interface is sorta stable, I kinda like where its going. Most if not all methods use the Python3's typing module to add type hinting.
-
+This library is mainly just a glorified wrapper around aiohttp calling the many Vault URLs. Eventually I want to add some helper methods to make using vault with microservices easier, like
+having a coroutine which will just sit there renewing tokens/secrets etc...
 
 Example
 =======
@@ -68,7 +68,7 @@ Features
 --------
 
 - Token, GitHub, AppRole, LDAP, RADIUS and User/Password Authentication backends
-- Generic Secret, TOTP and Transit backends
+- Generic Secret, Consul, TOTP and Transit backends
 - File and Syslog Audit backends
 - Policy management
 - Backend renaming
@@ -78,7 +78,9 @@ Features
 TODO (Near future)
 ------------------
 
-- Secret backends: Consul
+- Improve code coverage
+- Secret backends: Databases, RabbitMQ, Cubbyhole
+- Auth backends: Okta, AWS (hopefully)
 
 TODO (Long term)
 ----------------
@@ -87,17 +89,24 @@ TODO (Long term)
 - Possibly utility functions like a coroutine to keep renewing a token/secret
 - Policy validation with hcl library?
 - Socket audit backend
-- Okta, TLS and AWS auth support
-- Database, PKI, RabbitMQ, SSH secret support
+- TLS auth support
+- PKI, SSH secret support
 
+Testing
+-------
+
+As many of the unit tests that can, interact directly with Vault/Consul/LDAP/RADIUS without mocking. Currently my reasoning is that this way, if we change the variable that
+determins the vault version and incompatabilites in the REST interface were introduced they would appear immediatly in the masses of failing unit tests.
 
 Credits
 -------
 
-I used the cookiecutter package to setup the initial project. Was pretty good.
+I used the _Cookiecutter package to setup the initial project. Was pretty good.
+
+And most of the credit goes to the wonderful _aiohttp library which this library is pretty much a wrapper around.
 
 .. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+.. _aiohttp: https://github.com/aio-libs/aiohttp
 
 
 License
