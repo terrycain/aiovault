@@ -1,16 +1,16 @@
 """
 Base classes
 """
-from typing import Optional, Union, List, Awaitable, Callable
+import asyncio
+import datetime
 
 from collections import Mapping
-import datetime
-import dateutil.parser
-import dateutil.relativedelta
-import asyncio
+from typing import Optional, Union, List, Awaitable, Callable
 
 import aiohttp
 import aiohttp.client
+import dateutil.parser
+import dateutil.relativedelta
 
 from . import exceptions
 
@@ -21,15 +21,8 @@ class HTTPBase(object):
     """
     A generic HTTP class which provides various _get, _list _post etc... methods to query vault
     """
-    def __init__(self,
-                 vault_url: str = VAUTL_URL,
-                 token: Optional[str]=None,
-                 verify: bool = True,
-                 timeout: int = 10,
-                 session: Optional[aiohttp.ClientSession] = None,
-                 loop: asyncio.AbstractEventLoop = None
-                 ) -> None:
-
+    def __init__(self, vault_url: str = VAUTL_URL, token: Optional[str] = None, verify: bool = True, timeout: int = 10,
+                 session: Optional[aiohttp.ClientSession]=None, loop: asyncio.AbstractEventLoop=None):
         self.loop = loop
         if loop is None:
             self.loop = asyncio.get_event_loop()
@@ -43,7 +36,7 @@ class HTTPBase(object):
             else:
                 connector = None
 
-            self.session = aiohttp.ClientSession(connector=connector, read_timeout=timeout, conn_timeout=timeout, loop=self.loop)
+            self.session = aiohttp.ClientSession(connector=connector, read_timeout=timeout, conn_timeout=timeout, loop=self.loop)  # pylint: disable=unexpected-keyword-arg
 
         self._auth_token = token
         self.timeout = timeout
@@ -77,7 +70,8 @@ class HTTPBase(object):
         else:
             raise ValueError("Path isnt a str or list of str")
 
-    async def _get(self, path: Union[str, List[str]], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _get(self, path: Union[str, List[str]], params: Optional[dict] = None,
+                   wrap_ttl: Optional[int] = None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP GET request
 
@@ -87,7 +81,8 @@ class HTTPBase(object):
         """
         return await self._request('get', path, payload=None, params=params, wrap_ttl=wrap_ttl)
 
-    async def _delete(self, path: Union[str, List[str]], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _delete(self, path: Union[str, List[str]], params: Optional[dict] = None,
+                      wrap_ttl: Optional[int] = None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP DELETE request
 
@@ -97,7 +92,8 @@ class HTTPBase(object):
         """
         return await self._request('delete', path, payload=None, params=params, wrap_ttl=wrap_ttl)
 
-    async def _list(self, path: Union[str, List[str]], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _list(self, path: Union[str, List[str]], params: Optional[dict] = None,
+                    wrap_ttl: Optional[int] = None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP LIST request
 
@@ -107,7 +103,8 @@ class HTTPBase(object):
         """
         return await self._request('list', path, payload=None, params=params, wrap_ttl=wrap_ttl)
 
-    async def _post(self, path: Union[str, List[str]], payload: Optional[dict]=None, params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _post(self, path: Union[str, List[str]], payload: Optional[dict] = None, params: Optional[dict] = None,
+                    wrap_ttl: Optional[int] = None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP POST request
 
@@ -118,7 +115,8 @@ class HTTPBase(object):
         """
         return await self._request('post', path, payload=payload, params=params, wrap_ttl=wrap_ttl)
 
-    async def _put(self, path: Union[str, List[str]], payload: Optional[dict]=None, params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _put(self, path: Union[str, List[str]], payload: Optional[dict] = None, params: Optional[dict] = None,
+                   wrap_ttl: Optional[int] = None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP PUT request
 
@@ -129,7 +127,8 @@ class HTTPBase(object):
         """
         return await self._request('put', path, payload=payload, params=params, wrap_ttl=wrap_ttl)
 
-    async def _request(self, method: str, path: Union[str, List[str]], payload: Optional[dict], params: Optional[dict]=None, wrap_ttl: Optional[int]=None) -> Awaitable[aiohttp.client.ClientResponse]:
+    async def _request(self, method: str, path: Union[str, List[str]], payload: Optional[dict], params: Optional[dict] = None,
+                       wrap_ttl: Optional[int] = None) -> Awaitable[aiohttp.client.ClientResponse]:
         """
         HTTP Request method which takes a method
 
@@ -160,11 +159,12 @@ class HTTPBase(object):
         if params is not None:
             kwargs['params'] = params
 
-        async with aiohttp.ClientSession(loop=self.loop) as session:
+        async with aiohttp.ClientSession(loop=self.loop) as session:  # pylint: disable=not-async-context-manager
             if method != 'list':
                 method_func = getattr(session, method)(url, **kwargs)
             else:
-                method_func = aiohttp.client._RequestContextManager(session._request('LIST', url, **kwargs))
+                # Need to grab some internal stuff from aiohttp to do LIST requests
+                method_func = aiohttp.client._RequestContextManager(session._request('LIST', url, **kwargs))  # pylint: disable=protected-access
 
             async with method_func as response:
                 return await self._validate_response(response)
@@ -189,7 +189,7 @@ class HTTPBase(object):
             return response
 
     @staticmethod
-    def _raise_error(status: int, message: Optional[str]=None, errors: Optional[list]=None):
+    def _raise_error(status: int, message: Optional[str] = None, errors: Optional[list] = None):
         """
         Raise an error based on the status code
 
@@ -236,7 +236,8 @@ class ResponseBase(Mapping):
 
     It can also unwrap wrapped responses and rewrap responses, has convenience methods to check expiry etc...
     """
-    def __init__(self, json_dict: dict, request_func: Callable[[str, Union[str, List[str]], Optional[dict], Optional[int]], Awaitable[aiohttp.client.ClientResponse]]) -> None:
+    def __init__(self, json_dict: dict, request_func: Callable[[str, Union[str, List[str]], Optional[dict], Optional[int]],
+                                                               Awaitable[aiohttp.client.ClientResponse]]) -> None:
         self._request = request_func
 
         self.warnings = None
@@ -296,10 +297,10 @@ class ResponseBase(Mapping):
         """
         if self.is_wrapped:
             return datetime.datetime.now(tz=self.wrapped_at.tzinfo) > self.expires_at
-        else:
-            return True
 
-    async def unwrap(self, wrap_ttl: Optional[int]=None):
+        return True
+
+    async def unwrap(self, wrap_ttl: Optional[int] = None):
         """
         Unwrap a wrapped respone else do nothing
 

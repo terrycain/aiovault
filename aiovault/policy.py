@@ -9,9 +9,6 @@ class BasePolicy(HTTPBase):
     """
     Base policy class
     """
-    def __init__(self, *args, **kwargs):
-        super(BasePolicy, self).__init__(*args, **kwargs)
-
     async def create(self, name: str, rules: str):
         """
         Create policy
@@ -43,7 +40,7 @@ class BasePolicy(HTTPBase):
         # can delete policy over and over again with a 200 OK
         await self._delete(['sys/policy', name])
 
-    async def read(self, name: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def read(self, name: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         Read policy
 
@@ -56,7 +53,7 @@ class BasePolicy(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def list(self, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def list(self, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         List policies
 

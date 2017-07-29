@@ -6,7 +6,11 @@ from .base import HTTPBase, ResponseBase
 
 
 class FileBackend(HTTPBase):
-    async def mount(self, mount_path: str, filepath: str, description: Optional[str]=None, log_raw: bool=False, hmac_accessor: bool=True, mode: int=0o0600, log_format: str='json', line_prefix: Optional[str]=''):
+    """
+    Vault File Audit Backend
+    """
+    async def mount(self, mount_path: str, filepath: str, description: Optional[str] = None, log_raw: bool = False, hmac_accessor: bool = True,
+                    mode: int = 0o0600, log_format: str = 'json', line_prefix: Optional[str] = ''):
         """
         Mount file audit backend
 
@@ -41,7 +45,11 @@ class FileBackend(HTTPBase):
 
 
 class SyslogBackend(HTTPBase):
-    async def mount(self, mount_path: str, description: Optional[str]=None, log_raw: bool=False, hmac_accessor: bool=True, log_format: str='json', line_prefix: Optional[str]='', facility='AUTH', tag='vault'):
+    """
+    Vault Syslog Audit Backend
+    """
+    async def mount(self, mount_path: str, description: Optional[str] = None, log_raw: bool = False, hmac_accessor: bool = True, log_format: str = 'json',
+                    line_prefix: Optional[str] = '', facility: str = 'AUTH', tag: str = 'vault'):
         """
         Mount syslog audit backend
 
@@ -121,7 +129,7 @@ class BaseAudit(HTTPBase):
 
         return self._syslog
 
-    async def list(self, wrap_ttl: Union[int, None]=None) -> ResponseBase:
+    async def list(self, wrap_ttl: Union[int, None] = None) -> ResponseBase:
         """
         List audit backends
 
@@ -133,7 +141,7 @@ class BaseAudit(HTTPBase):
 
         return ResponseBase(json_dict=json, request_func=self._request)
 
-    async def delete(self, path: str) -> ResponseBase:
+    async def delete(self, path: str):
         """
         Delete an audit backend
 
@@ -142,7 +150,7 @@ class BaseAudit(HTTPBase):
         """
         await self._delete(['sys/audit', path])
 
-    async def hash(self, path: str, input: str, wrap_ttl: Optional[int]=None) -> ResponseBase:
+    async def hash(self, path: str, msg: str, wrap_ttl: Optional[int] = None) -> ResponseBase:
         """
         Get a HMAC of the input based on the given mount path
 
@@ -154,12 +162,12 @@ class BaseAudit(HTTPBase):
 
 
         :param path: Audit backend mount path
-        :param input: Input to be hashed
+        :param msg: Input to be hashed
         :param wrap_ttl: Wrap TTL
         :return: A response containing a key 'hash'
         :raises exceptions.VaultError: On error
         """
-        payload = {'input': input}
+        payload = {'input': msg}
         response = await self._post(['sys/audit-hash', path], payload=payload, wrap_ttl=wrap_ttl)
         json = await response.json()
 
