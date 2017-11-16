@@ -6,9 +6,6 @@ Async library for Hasicorp Vault
 .. image:: https://img.shields.io/pypi/v/aiovault.svg
   :target: https://pypi.python.org/pypi/aiovault
 
-.. image:: https://img.shields.io/pypi/dm/aiovault.svg
-  :target: https://pypi.python.org/pypi/aiovault
-
 .. image:: https://img.shields.io/travis/terrycain/aiovault/master.svg?label=master%20build
   :target: https://travis-ci.org/terrycain/aiovault
 
