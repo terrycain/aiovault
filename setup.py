@@ -33,7 +33,7 @@ test_requirements = [
 
 setup(
     name='aiovault',
-    version='1.0.0',
+    version='1.1.0',
     description="Vault asyncio",
     long_description=readme + '\n\n' + history,
     author="Terry Cain",
