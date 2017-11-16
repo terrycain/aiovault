@@ -30,6 +30,11 @@ Async library for Hasicorp Vault
   :target: https://pyup.io/repos/github/terrycain/aiovault/
   :alt: Python 3
 
+aiovault 1.1.1 release
+======================
+
+Minor bugfixes
+
 aiovault 1.0.0 release
 ======================
 
