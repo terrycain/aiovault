@@ -159,15 +159,14 @@ class HTTPBase(object):
         if params is not None:
             kwargs['params'] = params
 
-        async with aiohttp.ClientSession(loop=self.loop) as session:  # pylint: disable=not-async-context-manager
-            if method != 'list':
-                method_func = getattr(session, method)(url, **kwargs)
-            else:
-                # Need to grab some internal stuff from aiohttp to do LIST requests
-                method_func = aiohttp.client._RequestContextManager(session._request('LIST', url, **kwargs))  # pylint: disable=protected-access
+        if method != 'list':
+            method_func = getattr(self.session, method)(url, **kwargs)
+        else:
+            # Need to grab some internal stuff from aiohttp to do LIST requests
+            method_func = aiohttp.client._RequestContextManager(self.session._request('LIST', url, **kwargs))  # pylint: disable=protected-access
 
-            async with method_func as response:
-                return await self._validate_response(response)
+        async with method_func as response:
+            return await self._validate_response(response)
 
     @classmethod
     async def _validate_response(cls, response: aiohttp.client.ClientResponse) -> Awaitable[aiohttp.client.ClientResponse]:
